@@ -10,7 +10,7 @@ import time
 
 
 class TSPSolution:
-    def __init__(self, listOfCities, cost = None):
+    def __init__(self, listOfCities, cost=None):
         self.route = listOfCities
         if cost is None:
             self.cost = self._costOfRoute()

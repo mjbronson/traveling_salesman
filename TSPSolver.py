@@ -194,7 +194,7 @@ class TSPSolver:
 
 class Node:
 
-    def __init__(self, matrix, lower_bound, visited_cities):
+    def __init__(self, matrix: np.array, lower_bound: int, visited_cities: List[int]):
         self.matrix = matrix
         self.lower_bound = lower_bound
         self.visited_cities = visited_cities
