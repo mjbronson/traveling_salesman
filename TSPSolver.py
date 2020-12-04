@@ -189,6 +189,17 @@ class TSPSolver:
         best solution found.  You may use the other three field however you like.
         algorithm</returns>
         """
+
+        """
+        GA(Fitness())
+            population = InitializePopulation()
+            while not dont do:
+                parents = Select(population, Fitness())
+                children = Crossover(parents)
+                children = Mutate(children)
+                population = Survive(population, children, Fitness())
+            return HighestFitness(population)
+        """
         pass
 
 
