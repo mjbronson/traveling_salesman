@@ -202,6 +202,13 @@ class TSPSolver:
         """
         pass
 
+    def select(self, candidates: List[TSPSolution], num_parents=2):
+        candidates.sort(reverse=True, key=self.fitness_function)
+        return candidates[:num_parents]
+
+    def fitness_function(self, solution: TSPSolution) -> int:
+        pass
+
 
 class Node:
 
