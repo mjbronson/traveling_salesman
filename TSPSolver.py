@@ -206,6 +206,25 @@ class TSPSolver:
         candidates.sort(reverse=True, key=self.fitness_function)
         return candidates[:num_parents]
 
+    def mutate(self, children: List[TSPSolution], max_jump=None):
+        '''
+        Slightly change each child route given in hopes that the 'mutation' will lead
+        to greater survivability. It does it by swapping two random elements in the route.
+        :param children: A list of TSPSolutions that will be mutated one by one
+        :param max_jump: The maximum distance between two swapped elements.
+        :return: The mutated list of TSPSolutions.
+        '''
+        for child in children:
+            ncities = len(child.route)
+            if max_jump is None or max_jump > ncities-1:
+                max_jump = ncities-1
+            swap1 = random.randint(0, ncities)
+            min = swap1-max_jump if swap1-max_jump >= 0 else 0
+            max = swap1+max_jump if swap1+max_jump < ncities else ncities-1
+            swap2 = random.randint(min, max)
+            child.route[swap1], child.route[swap2] = child.route[swap2], child.route[swap1]
+        return children
+
     def fitness_function(self, solution: TSPSolution) -> int:
         pass
 
