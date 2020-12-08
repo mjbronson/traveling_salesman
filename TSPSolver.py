@@ -209,6 +209,18 @@ class TSPSolver:
         candidates.sort(reverse=True, key=self.fitness_function)
         return candidates[:num_parents]
 
+    def crossover(self, parents: List[TSPSolution], num_children):
+        children = []
+        for i in range(num_children):
+            mother = random.choice(parents)
+            father = random.choice(parents)
+            child_cities = []
+            for mother_city, father_city in zip(mother.route, father.route):
+                child_cities.append(mother_city if random.randint(0,1) else father_city)
+            children.append(TSPSolution(child_cities))
+
+        return children
+
     def mutate(self, children: List[TSPSolution], max_jump=None):
         '''
         Slightly change each child route given in hopes that the 'mutation' will lead
