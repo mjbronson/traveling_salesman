@@ -189,7 +189,6 @@ class TSPSolver:
         best solution found.  You may use the other three field however you like.
         algorithm</returns>
         """
-
         """
         GA(Fitness())
             self.population = InitializePopulation()
@@ -200,9 +199,20 @@ class TSPSolver:
                 population = Survive(population, children, Fitness())
             return HighestFitness(population)
         """
+        self.greedy(time_allowance)
+        population = [self.bssf]
+        done = False
+        while not done:
+            parents = self.select(population, self.fitness())
+            children = self.crossover(parents)
+            children = self.mutate(children)
+            population = self.survive(population, children, self.fitness())
         self.worstCost = 1
+
         #FIXME This should find & keep track of the actual worst cost thus far.
         # The fitness function relies on having this number!
+
+        return self.highestFitness(population)
         pass
 
     def select(self, candidates: List[TSPSolution], num_parents=2):
