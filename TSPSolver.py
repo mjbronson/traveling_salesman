@@ -16,10 +16,14 @@ from TSPClasses import *
 import heapq
 import itertools
 from queue import PriorityQueue
+import random
 
 
 class TSPSolver:
     def __init__(self, gui_view):
+        self.worstCost = 1
+        # FIXME This should find & keep track of the actual worst cost thus far.
+        # The fitness function relies on having this number!
         self._scenario = None
         self.bssf = None
 
@@ -211,14 +215,17 @@ class TSPSolver:
             parents = self.select(population, num_parents)
             children = self.crossover(parents, num_children)
             children = self.mutate(children)
-            population = self.survival_function(population, children)
-
-        self.worstCost = 1
-        #FIXME This should find & keep track of the actual worst cost thus far.
-        # The fitness function relies on having this number!
+            population.extend(children)
+            self.survival_function(population)
 
         return self.highestFitness(population)
-        pass
+
+    def highestFitness(self, population):
+        result = population[0]
+        for candidate in population:
+            if self.fitness_function(candidate) > self.fitness_function(result):
+                result = candidate
+        return result
 
     def select(self, candidates: List[TSPSolution], num_parents=2):
         candidates.sort(reverse=True, key=self.fitness_function)
@@ -231,7 +238,7 @@ class TSPSolver:
             father = random.choice(parents)
             child_cities = []
             for mother_city, father_city in zip(mother.route, father.route):
-                child_cities.append(mother_city if random.randint(0,1) else father_city)
+                child_cities.append(mother_city if random.randint(0, 1) else father_city)
             children.append(TSPSolution(child_cities))
 
         return children
@@ -246,46 +253,44 @@ class TSPSolver:
         '''
         for child in children:
             ncities = len(child.route)
-            if max_jump is None or max_jump > ncities-1:
-                max_jump = ncities-1
-            swap1 = random.randint(0, ncities)
-            min = swap1-max_jump if swap1-max_jump >= 0 else 0
-            max = swap1+max_jump if swap1+max_jump < ncities else ncities-1
+            if max_jump is None or max_jump > ncities - 1:
+                max_jump = ncities - 1
+            swap1 = random.randint(0, ncities-1)
+            min = swap1 - max_jump if swap1 - max_jump >= 0 else 0
+            max = swap1 + max_jump if swap1 + max_jump < ncities else ncities - 1
             swap2 = random.randint(min, max)
             child.route[swap1], child.route[swap2] = child.route[swap2], child.route[swap1]
         return children
 
-    def survival_function(self):
-        #This function doesn't have input or output- it operates on the current population, and does it in-place.
-        #This function does NOT guarantee a constant population size. It would be pretty easy to guarantee that,
-        #so if we want to we can.
+    def survival_function(self, population):
+        # This function doesn't have input or output- it operates on the current population, and does it in-place.
+        # This function does NOT guarantee a constant population size. It would be pretty easy to guarantee that,
+        # so if we want to we can.
         percentageToKill = 0.10
-        numIndividualsToRemove = math.trunc(len(self.population * percentageToKill))
+        numIndividualsToRemove = math.trunc(len(population * percentageToKill))
         for i in range(0, numIndividualsToRemove):
             didKill = False
-            while(didKill == False):
-                currentIndividual = self.population[math.trunc((random() * 10000000000) % len(self.population))]
+            while (didKill == False):
+                currentIndividual = population[math.trunc((random() * 10000000000) % len(population))]
                 fitnessScore = self.fitness_function(currentIndividual)
                 randVal = random() * 100
-                if(randVal < fitnessScore):
-                    #FIXME Remove currentIndividual from the population
+                if (randVal < fitnessScore):
+                    # FIXME Remove currentIndividual from the population
                     didKill = True
-        #TODO This function.... well, we don't really know how long it takes. Because it grabs
+        # TODO This function.... well, we don't really know how long it takes. Because it grabs
         # random members of the population to see if they'll survive to the next round, it could theoretically
         # run forever if it continuously fails to remove the selected population member.
         # On the other hand, if it removes a population member on the first try each iteration, it could run in
         # o(n) time (technically O(n * percentageToKill) time, but that's approximated to O(n) time)
 
-
-
     def fitness_function(self, solution: TSPSolution) -> float:
-        #This function returns a decimal between 0 and 1 as a fitness score.
-        #It first calculates what percentage of the worst path length encountered so far
-        #the current path takes up, then squares that number to give the more fit (lower-cost)
-        #individuals an even better chance at surviving.
+        # This function returns a decimal between 0 and 1 as a fitness score.
+        # It first calculates what percentage of the worst path length encountered so far
+        # the current path takes up, then squares that number to give the more fit (lower-cost)
+        # individuals an even better chance at surviving.
         fractionalValue = solution.cost / self.worstCost
         return fractionalValue ** 2
-        #TODO This function runs in constant time- the length of the input bears no sway on how long it takes.
+        # TODO This function runs in constant time- the length of the input bears no sway on how long it takes.
         # It also doesn't take up any additional space- it works in-place.
 
 
