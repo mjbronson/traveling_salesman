@@ -257,8 +257,19 @@ class TSPSolver:
             mother = random.choice(parents)
             father = random.choice(parents)
             child_cities = []
-            for mother_city, father_city in zip(mother.route, father.route):
-                child_cities.append(mother_city if random.randint(0, 1) else father_city)
+
+            # pick a random sequence from the father and add to the child
+            father_start = random.randrange(len(father.route))
+            for i in range(father_start, father_start + random.randint(1, len(father.route))):
+                child_cities.append(father.route[(i % len(father.route))])
+
+            # fill in what's missing from the mother in the order those cities appear
+            i = random.randrange(len(mother.route))
+            while len(child_cities) < len(mother.route):
+                if mother.route[i] not in child_cities:
+                    child_cities.append(mother.route[i])
+                i += 1
+            
             children.append(TSPSolution(child_cities))
 
         return children

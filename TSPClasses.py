@@ -128,6 +128,9 @@ class City:
         self._index = -1
         self._name = None
 
+    def __eq__(self, other):
+        return self._index == other._index
+
     def setIndexAndName(self, index, name):
         self._index = index
         self._name = name
