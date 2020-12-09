@@ -184,6 +184,7 @@ class TSPSolver:
                 'pruned': pruned_nodes}
 
     def fancy(self, time_allowance=60.0):
+        start_time = time.time()
         """
         <summary>
         This is the entry point for the algorithm you'll write for your group project.
@@ -205,20 +206,28 @@ class TSPSolver:
         """
         # Tuning Variables:
         num_parents = 2  # the number of parents that will be selected to repopulate
-        num_children = 2  # the number of children each parent will have
+        num_children = 4  # the number of children each parent will have
         max_jump = None  # the furthest away the mutate function will swap cities within a route/candidate
 
         self.greedy(time_allowance)
         population = [self.bssf]
         done = False
-        while not done:
+        while not done and time.time() < (start_time + time_allowance):
             parents = self.select(population, num_parents)
             children = self.crossover(parents, num_children)
             children = self.mutate(children)
             population.extend(children)
             self.survival_function(population)
 
-        return self.highestFitness(population)
+        end_time = time.time()
+        self.bssf =  self.highestFitness(population)
+        return {'cost': self.bssf.cost,
+                'time': end_time - start_time,
+                'count': 420,
+                'soln': self.bssf,
+                'max': None,
+                'total': None,
+                'pruned': None}
 
     def highestFitness(self, population):
         result = population[0]
@@ -267,13 +276,13 @@ class TSPSolver:
         # This function does NOT guarantee a constant population size. It would be pretty easy to guarantee that,
         # so if we want to we can.
         percentageToKill = 0.10
-        numIndividualsToRemove = math.trunc(len(population * percentageToKill))
+        numIndividualsToRemove = math.trunc(len(population) * percentageToKill)
         for i in range(0, numIndividualsToRemove):
             didKill = False
             while (didKill == False):
-                currentIndividual = population[math.trunc((random() * 10000000000) % len(population))]
+                currentIndividual = population[math.trunc((random.random() * 10000000000) % len(population))]
                 fitnessScore = self.fitness_function(currentIndividual)
-                randVal = random() * 100
+                randVal = random.random() * 100
                 if (randVal < fitnessScore):
                     # FIXME Remove currentIndividual from the population
                     didKill = True
