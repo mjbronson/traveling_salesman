@@ -205,12 +205,22 @@ class TSPSolver:
             return HighestFitness(population)
         """
         # Tuning Variables:
-        num_parents = 2  # the number of parents that will be selected to repopulate
+        num_parents = 8  # the number of parents that will be selected to repopulate
         num_children = 4  # the number of children each parent will have
+        self.min_population_size = 50
+        self.max_population_size = 500
+        self.percentageToKill = 0.10
         max_jump = None  # the furthest away the mutate function will swap cities within a route/candidate
 
         self.greedy(time_allowance)
         population = [self.bssf]
+        worstCost = self.bssf.cost
+        for i in range(0, self.min_population_size - 1):
+            newSolution = self.defaultRandomTour()['soln']
+            if newSolution.cost > worstCost:
+                worstCost = newSolution.cost
+            population.append(newSolution)
+            #Starts us off with a population of at least our minimum size
         done = False
         while not done and time.time() < (start_time + time_allowance):
             parents = self.select(population, num_parents)
@@ -237,7 +247,8 @@ class TSPSolver:
         return result
 
     def select(self, candidates: List[TSPSolution], num_parents=2):
-        candidates.sort(reverse=True, key=self.fitness_function)
+        #create a list of tuples with [solution : fitnessValue]
+        candidates.sort(key=self.fitness_function)
         return candidates[:num_parents]
 
     def crossover(self, parents: List[TSPSolution], num_children):
@@ -269,23 +280,30 @@ class TSPSolver:
             max = swap1 + max_jump if swap1 + max_jump < ncities else ncities - 1
             swap2 = random.randint(min, max)
             child.route[swap1], child.route[swap2] = child.route[swap2], child.route[swap1]
+            if child.cost > worstCost:
+                worstCost = child.cost
+
         return children
 
     def survival_function(self, population):
         # This function doesn't have input or output- it operates on the current population, and does it in-place.
         # This function does NOT guarantee a constant population size. It would be pretty easy to guarantee that,
         # so if we want to we can.
-        percentageToKill = 0.10
-        numIndividualsToRemove = math.trunc(len(population) * percentageToKill)
+        numIndividualsToRemove = math.trunc(len(population) * self.percentageToKill)
+        if (len(population) - numIndividualsToRemove) > self.max_population_size:
+            numIndividualsToRemove = len(population - self.max_population_size)
         for i in range(0, numIndividualsToRemove):
-            didKill = False
-            while (didKill == False):
-                currentIndividual = population[math.trunc((random.random() * 10000000000) % len(population))]
-                fitnessScore = self.fitness_function(currentIndividual)
-                randVal = random.random() * 100
-                if (randVal < fitnessScore):
-                    # FIXME Remove currentIndividual from the population
-                    didKill = True
+            if len(population) > self.min_population_size:
+               didKill = False
+               while (didKill == False):
+                    currentIndex = math.trunc((random.random() * 10000000000) % len(population))
+                    currentIndividual = population[currentIndex]
+                    fitnessScore = self.fitness_function(currentIndividual)
+                    randVal = random.random() * 100
+                    if (randVal < fitnessScore):
+                       del population[currentIndex]
+                       didKill = True
+
         # TODO This function.... well, we don't really know how long it takes. Because it grabs
         # random members of the population to see if they'll survive to the next round, it could theoretically
         # run forever if it continuously fails to remove the selected population member.
