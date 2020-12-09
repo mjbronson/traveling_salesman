@@ -199,16 +199,21 @@ class TSPSolver:
                 population = Survive(population, children, Fitness())
             return HighestFitness(population)
         """
+        # Tuning Variables:
+        num_parents = 2  # the number of parents that will be selected to repopulate
+        num_children = 2  # the number of children each parent will have
+        max_jump = None  # the furthest away the mutate function will swap cities within a route/candidate
+
         self.greedy(time_allowance)
         population = [self.bssf]
         done = False
         while not done:
-            parents = self.select(population, self.fitness_function())
-            children = self.crossover(parents)
+            parents = self.select(population, num_parents)
+            children = self.crossover(parents, num_children)
             children = self.mutate(children)
-            population = self.survival_function(population, children, self.fitness_function())
-        self.worstCost = 1
+            population = self.survival_function(population, children)
 
+        self.worstCost = 1
         #FIXME This should find & keep track of the actual worst cost thus far.
         # The fitness function relies on having this number!
 
