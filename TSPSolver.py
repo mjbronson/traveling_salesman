@@ -183,6 +183,23 @@ class TSPSolver:
                 'total': added_nodes,
                 'pruned': pruned_nodes}
 
+    @property
+    def cost_matrix(self):
+        """
+        Generates the cost matrix for the cities.
+        Time: O(n^2) with the nested for loop iterating over the cities.
+        Space: O(n^2) because we store the costs in a two-dimensional array.
+        """
+        if not hasattr(self, '_cost_matrix'):
+            cities = self._scenario.cities
+            ncities = len(cities)
+            self._cost_matrix = np.zeros((ncities, ncities))
+            for i, from_city in enumerate(cities):
+                for j, to_city in enumerate(cities):
+                    self._cost_matrix[i, j] = from_city.costTo(to_city)
+        return self._cost_matrix
+
+
     def fancy(self, time_allowance=60.0):
         start_time = time.time()
         """
@@ -206,31 +223,21 @@ class TSPSolver:
         """
         # Tuning Variables:
         num_parents = 8  # the number of parents that will be selected to repopulate
-        num_children = 4  # the number of children each parent will have
-        self.min_population_size = 50
-        self.max_population_size = 500
-        self.percentageToKill = 0.10
+        num_children = 32  # the number of children each generation
+        min_population_size = 50
+        max_population_size = 500
+        self.percentage_to_kill = 0.10
         max_jump = None  # the furthest away the mutate function will swap cities within a route/candidate
 
-        self.greedy(time_allowance)
-        population = [self.bssf]
-        worstCost = self.bssf.cost
-        for i in range(0, self.min_population_size - 1):
-            newSolution = self.defaultRandomTour()['soln']
-            if newSolution.cost > worstCost:
-                worstCost = newSolution.cost
-            population.append(newSolution)
-            #Starts us off with a population of at least our minimum size
-        done = False
-        while not done and time.time() < (start_time + time_allowance):
+        population = self.initialize_population(min_population_size)
+        while (end_time:= time.time()) < (start_time + time_allowance):
             parents = self.select(population, num_parents)
             children = self.crossover(parents, num_children)
-            children = self.mutate(children)
-            population.extend(children)
-            self.survival_function(population)
+            self.mutate(children)
+            self.survive(population, children, max_population_size)
 
-        end_time = time.time()
-        self.bssf =  self.highestFitness(population)
+
+        self.bssf = TSPSolution(population[0], self.fitness(population[0]))
         return {'cost': self.bssf.cost,
                 'time': end_time - start_time,
                 'count': 420,
@@ -239,19 +246,32 @@ class TSPSolver:
                 'total': None,
                 'pruned': None}
 
-    def highestFitness(self, population):
-        result = population[0]
-        for candidate in population:
-            if self.fitness_function(candidate) > self.fitness_function(result):
-                result = candidate
-        return result
+    def initialize_population(self, starting_size):
+        greedy_soln = self.greedy()['soln']
+        population = [greedy_soln.route] if greedy_soln else []
+        while len(population) < starting_size:
+            seed = list(self._scenario.cities)
+            random.shuffle(seed)
+            population.append(seed)
+        return population
 
-    def select(self, candidates: List[TSPSolution], num_parents=2):
-        #create a list of tuples with [solution : fitnessValue]
-        candidates.sort(key=self.fitness_function)
-        return candidates[:num_parents]
+    def fitness(self, route):
+        cost = 0
+        last = route[0]
+        for current in route[1:]:
+            cost += self.cost_matrix[last._index, current._index]
+            last = current
+        cost += self.cost_matrix[route[-1]._index, route[0]._index]
+        return cost
 
-    def crossover(self, parents: List[TSPSolution], num_children):
+    def select(self, population, num_parents):
+        # we always will breed the very best solution we have
+        parents = [population[0]]
+        while len(parents) < num_parents:
+            parents.append(random.choice(population))
+        return parents
+
+    def crossover(self, parents, num_children):
         children = []
         for i in range(num_children):
             mother = random.choice(parents)
@@ -259,22 +279,52 @@ class TSPSolver:
             child_cities = []
 
             # pick a random sequence from the father and add to the child
-            father_start = random.randrange(len(father.route))
-            for i in range(father_start, father_start + random.randint(1, len(father.route))):
-                child_cities.append(father.route[(i % len(father.route))])
+            father_start = random.randrange(len(father))
+            for i in range(father_start, father_start + random.randint(1, len(father))):
+                child_cities.append(father[(i % len(father))])
 
             # fill in what's missing from the mother in the order those cities appear
-            i = random.randrange(len(mother.route))
-            while len(child_cities) < len(mother.route):
-                if mother.route[i] not in child_cities:
-                    child_cities.append(mother.route[i])
+            i = random.randrange(len(mother))
+            while len(child_cities) < len(mother):
+                city = mother[i % len(mother)]
+                if city not in child_cities:
+                    child_cities.append(city)
                 i += 1
-            
-            children.append(TSPSolution(child_cities))
+            children.append(child_cities)
 
         return children
 
-    def mutate(self, children: List[TSPSolution], max_jump=None):
+    def mutate(self, children):
+        for child in children:
+            swap1 = random.randrange(len(child))
+            swap2 = random.randrange(len(child))
+
+            child[swap1], child[swap2] = child[swap2], child[swap1]
+
+    def survive(self, population, children, max_size):
+        population.sort(key=self.fitness)
+        population = population[:max_size - len(children)] + children
+        population.sort(key=self.fitness)
+
+
+
+
+
+
+
+    def highestFitness(self, population):
+        result = population[0]
+        for candidate in population:
+            if self.fitness_function(candidate) > self.fitness_function(result):
+                result = candidate
+        return result
+
+    def select_parents(self, candidates: List[TSPSolution], num_parents=2):
+        #create a list of tuples with [solution : fitnessValue]
+        candidates.sort(key=self.fitness_function)
+        return candidates[:num_parents]
+
+    def mutate_children(self, children: List[TSPSolution], max_jump=None):
         '''
         Slightly change each child route given in hopes that the 'mutation' will lead
         to greater survivability. It does it by swapping two random elements in the route.
@@ -300,7 +350,7 @@ class TSPSolver:
         # This function doesn't have input or output- it operates on the current population, and does it in-place.
         # This function does NOT guarantee a constant population size. It would be pretty easy to guarantee that,
         # so if we want to we can.
-        numIndividualsToRemove = math.trunc(len(population) * self.percentageToKill)
+        numIndividualsToRemove = math.trunc(len(population) * self.percentage_to_kill)
         if (len(population) - numIndividualsToRemove) > self.max_population_size:
             numIndividualsToRemove = len(population - self.max_population_size)
         for i in range(0, numIndividualsToRemove):
@@ -319,7 +369,7 @@ class TSPSolver:
         # random members of the population to see if they'll survive to the next round, it could theoretically
         # run forever if it continuously fails to remove the selected population member.
         # On the other hand, if it removes a population member on the first try each iteration, it could run in
-        # o(n) time (technically O(n * percentageToKill) time, but that's approximated to O(n) time)
+        # o(n) time (technically O(n * percentage_to_kill) time, but that's approximated to O(n) time)
 
     def fitness_function(self, solution: TSPSolution) -> float:
         # This function returns a decimal between 0 and 1 as a fitness score.
