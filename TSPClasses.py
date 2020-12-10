@@ -17,7 +17,8 @@ class TSPSolution:
         else:
             self.cost = cost
 
-    # print( [c._index for c in listOfCities] )
+    def __lt__(self, other):
+        return self.cost < other.cost
 
     def _costOfRoute(self):
         cost = 0

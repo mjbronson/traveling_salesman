@@ -183,21 +183,18 @@ class TSPSolver:
                 'total': added_nodes,
                 'pruned': pruned_nodes}
 
-    @property
-    def cost_matrix(self):
+    def generate_cost_matrix(self):
         """
         Generates the cost matrix for the cities.
         Time: O(n^2) with the nested for loop iterating over the cities.
         Space: O(n^2) because we store the costs in a two-dimensional array.
         """
-        if not hasattr(self, '_cost_matrix'):
-            cities = self._scenario.cities
-            ncities = len(cities)
-            self._cost_matrix = np.zeros((ncities, ncities))
-            for i, from_city in enumerate(cities):
-                for j, to_city in enumerate(cities):
-                    self._cost_matrix[i, j] = from_city.costTo(to_city)
-        return self._cost_matrix
+        cities = self._scenario.cities
+        ncities = len(cities)
+        self.cost_matrix = np.zeros((ncities, ncities))
+        for i, from_city in enumerate(cities):
+            for j, to_city in enumerate(cities):
+                self.cost_matrix[i, j] = from_city.costTo(to_city)
 
 
     def fancy(self, time_allowance=60.0):
@@ -222,19 +219,22 @@ class TSPSolver:
             return HighestFitness(population)
         """
         # Tuning Variables:
-        num_parents = 8  # the number of parents that will be selected to repopulate
-        num_children = 32  # the number of children each generation
-        min_population_size = 50
-        max_population_size = 500
+        breeding_percentage = .8  # the proportion of parents that will be selected to repopulate
+        num_children = 3  # the number of children per parent
+        min_population_size = 3 * len(self._scenario.cities)
+        max_population_size = 30 * len(self._scenario.cities)
         self.percentage_to_kill = 0.10
         max_jump = None  # the furthest away the mutate function will swap cities within a route/candidate
 
+        self.generate_cost_matrix()
         population = self.initialize_population(min_population_size)
-        while (end_time:= time.time()) < (start_time + time_allowance):
-            parents = self.select(population, len(population) / 3)
-            children = self.crossover(parents, len(parents) * 3)
+        end_time = time.time()
+        while end_time < (start_time + time_allowance):
+            parents = self.select(population, int(len(population) * breeding_percentage))
+            children = self.crossover(parents, len(parents) * num_children)
             self.mutate(children)
-            self.survive(population, children, max_population_size)
+            population = self.survive(population, children, max_population_size)
+            end_time = time.time()
 
 
         self.bssf = TSPSolution(population[0], self.fitness(population[0]))
@@ -265,8 +265,9 @@ class TSPSolver:
         return cost
 
     def select(self, population, num_parents):
-        # we always will breed the very best solution we have
-        parents = [population[0]]
+        # 75% of breeding population will be top solutions
+        parents = population[:int(.75 * num_parents)]
+        # rest are random solutions
         while len(parents) < num_parents:
             parents.append(random.choice(population))
         return parents
@@ -302,9 +303,10 @@ class TSPSolver:
             child[swap1], child[swap2] = child[swap2], child[swap1]
 
     def survive(self, population, children, max_size):
+        population += children
+        random.shuffle(population)
         population.sort(key=self.fitness)
-        population = population[:max_size - len(children)] + children
-        population.sort(key=self.fitness)
+        return population[:max_size]
 
 
 
