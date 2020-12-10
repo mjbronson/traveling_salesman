@@ -231,8 +231,8 @@ class TSPSolver:
 
         population = self.initialize_population(min_population_size)
         while (end_time:= time.time()) < (start_time + time_allowance):
-            parents = self.select(population, num_parents)
-            children = self.crossover(parents, num_children)
+            parents = self.select(population, len(population) / 3)
+            children = self.crossover(parents, len(parents) * 3)
             self.mutate(children)
             self.survive(population, children, max_population_size)
 
